@@ -1,0 +1,68 @@
+version: 1
+profile: default
+
+user:
+  email: "name@company.com"
+  timezone: "Europe/Prague"
+  country_code: "CZ"
+
+schedule:
+  workdays: ["mon", "tue", "wed", "thu", "fri"]
+  daily_target_hours: 8
+  exclude_dates: []
+  include_dates: []
+
+sources:
+  ado:
+    enabled: true
+    org_url: "https://dev.azure.com/your-org"
+    project: "YourProject"
+    query_mode: "assigned_and_touched"
+    states_done: ["Done", "Closed", "Resolved"]
+    effort_field: "Microsoft.VSTS.Scheduling.CompletedWork"
+  calendar:
+    enabled: true
+    provider: "microsoft_graph"
+    include_event_types: ["meeting", "focus"]
+    min_minutes: 15
+  holidays:
+    enabled: true
+    provider: "public_holidays_api"
+    region: "CZ"
+    behavior: "block_workday"
+
+clockify:
+  workspace_id: "workspace-id"
+  default_project_id: "project-id-default"
+  default_task_id: null
+  billable: true
+
+mapping:
+  by_source:
+    ado: {}
+    calendar:
+      default:
+        project_id: "project-id-meetings"
+        task_id: null
+        tags: ["meeting"]
+    holidays:
+      default:
+        project_id: "project-id-admin"
+        task_id: null
+        tags: ["holiday"]
+  fallback:
+    project_id: "project-id-default"
+    task_id: null
+    tags: ["multi-source-sync"]
+
+allocation:
+  mode: "proportional"
+  min_entry_minutes: 15
+  round_to_minutes: 60
+  overlap_policy: "calendar_precedence"
+
+clockify_planning:
+  max_block_hours: 6
+  min_block_minutes: 60
+  max_entries_per_day: 8
+  default_fallback_description: "Operational and coordination work."
