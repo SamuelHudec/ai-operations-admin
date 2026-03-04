@@ -75,6 +75,7 @@ Phase 1 scope:
 - Write accepted suggestion table to Clockify:
   - `python skills/loggify-me/scripts/write_clockify_logs.py --accepted-json reports/suggested-logs.accepted.json`
   - Add `--apply` to actually create entries (without it, script runs dry-run).
+  - Always run one dry-run first and show the printed suggestion table before asking user for apply confirmation.
   - After `--apply`, local `reports/` files are cleaned automatically by default.
   - Use `--no-cleanup-reports` only if you need to keep artifacts for debugging.
   - Writer skips any future-dated rows as a final safety guard.
@@ -133,6 +134,7 @@ Outlook Web publish flow (for new users):
   - unresolved mappings
   - validation warnings
 - Show a compact per-day table with total planned vs synced hours.
+- Before requesting `--apply` confirmation, print the full suggested log table (date, start, end, minutes, description, tag).
 
 ## Operating modes
 

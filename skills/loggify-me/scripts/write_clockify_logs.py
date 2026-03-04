@@ -206,6 +206,33 @@ def _filter_out_future_payloads(payloads: list[dict[str, Any]], tz_name: str) ->
     return kept, skipped
 
 
+def _print_suggested_rows_table(rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+    header = ["Date", "Start", "End", "Minutes", "Description", "Tag"]
+    widths = [10, 5, 5, 7, 78, 18]
+    print(
+        f"{header[0]:<{widths[0]}}  {header[1]:<{widths[1]}}  {header[2]:<{widths[2]}}  "
+        f"{header[3]:>{widths[3]}}  {header[4]:<{widths[4]}}  {header[5]}"
+    )
+    print("-" * (sum(widths) + 15))
+    for row in rows:
+        source_type = str(row.get("source_type") or "")
+        if source_type == "calendar":
+            tag = ",".join(str(x) for x in (row.get("tag_names") or []) if str(x).strip()) or "-"
+        else:
+            epic = row.get("parent_epic_id")
+            tag = str(epic) if epic is not None else "-"
+        print(
+            f"{str(row.get('date', '')):<{widths[0]}}  "
+            f"{str(row.get('slot_start', '--:--')):<{widths[1]}}  "
+            f"{str(row.get('slot_end', '--:--')):<{widths[2]}}  "
+            f"{int(row.get('minutes', 0)):>{widths[3]}}  "
+            f"{str(row.get('description', ''))[:widths[4]]:<{widths[4]}}  "
+            f"{tag[:widths[5]]}"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--accepted-json", default="reports/suggested-logs.accepted.json")
@@ -278,9 +305,11 @@ def main() -> int:
     task_id = clockify_cfg.get("default_task_id")
     billable = bool(clockify_cfg.get("billable", True))
 
+    rows_for_table: list[dict[str, Any]] = []
     if isinstance(source, dict):
         rows = list(source.get("suggested_logs") or [])
         _validate_rows(rows)
+        rows_for_table = rows
         payloads = _make_payloads(
             rows=rows,
             tz_name=cfg.timezone,
@@ -306,6 +335,9 @@ def main() -> int:
     print(f"Workspace: {cfg.workspace_id}")
     print(f"Apply mode: {'ON' if args.apply else 'OFF (dry-run)'}")
     print("")
+    if rows_for_table:
+        _print_suggested_rows_table(rows_for_table)
+        print("")
     for i, payload in enumerate(payloads[:20], start=1):
         print(
             f"{i}. {payload['start']} -> {payload['end']} | "
