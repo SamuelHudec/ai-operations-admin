@@ -1,10 +1,9 @@
 # Security Reference
 
-This skill needs credentials for Clockify and any enabled source adapter.
+This skill needs credentials for Clockify and personal workload settings.
+ADO is fetched via MCP; calendar is fetched from an ICS file/URL.
 
 Typical credentials:
-- ADO PAT or OAuth token
-- Calendar provider token (for example Microsoft Graph)
 - Clockify API key
 - Personal planning settings (`WORK_DAYS`, `DAILY_TARGET_HOURS`, optional `USER_TIMEZONE`)
 
@@ -13,23 +12,24 @@ Typical credentials:
 - Keep credentials out of git-tracked files.
 - Prefer environment variables or OS keychain-based secret tools.
 - Redact values in logs and command output.
-- For this repo, store local secrets in `skills/fill-clockify-from-sources/.credentials.env`.
+- For this repo, store local secrets in `skills/loggify-me/.credentials.env`.
 
 ## Recommended environment variables
 
 ```bash
-export ADO_TOKEN="***"
-export CALENDAR_TOKEN="***"
 export CLOCKIFY_API_KEY="***"
+export CLOCKIFY_DEFAULT_PROJECT_ID="***"
 export WORK_DAYS="mon,tue,wed,thu,fri"
 export DAILY_TARGET_HOURS="8"
+export CALENDAR_ICS_URL="https://.../calendar.ics"
 ```
 
 Optional non-secret variables:
 
 ```bash
-export ADO_ORG_URL="https://dev.azure.com/your-org"
 export CLOCKIFY_WORKSPACE_ID="workspace-id"
+# Alternative to CALENDAR_ICS_URL:
+export CALENDAR_ICS_FILE="/absolute/path/to/calendar.ics"
 ```
 
 ## Local development options
@@ -43,13 +43,11 @@ export CLOCKIFY_WORKSPACE_ID="workspace-id"
 
 - Never print raw token values.
 - Do not include auth headers in exception traces.
-- If auth fails, return a concise message indicating which provider failed and the HTTP status.
+- If calendar feed access fails, return a concise message indicating whether file read or URL download failed.
 
 ## Rotation guidance
 
 - Rotate tokens immediately if exposed.
 - Keep separate tokens per environment (dev/staging/prod).
 - Prefer least-privilege scopes:
-  - ADO: read work items only (plus fields required for effort extraction)
-  - Calendar: read events only in selected calendar scope
   - Clockify: read/write time entries in target workspace

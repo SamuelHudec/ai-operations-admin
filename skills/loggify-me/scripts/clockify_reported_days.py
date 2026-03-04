@@ -37,23 +37,32 @@ def clockify_reported_minutes(
     if not user_id:
         raise RuntimeError("Could not resolve Clockify user id from /api/v1/user")
 
-    q = parse.urlencode(
-        {
-            "start": f"{start.isoformat()}T00:00:00.000Z",
-            "end": f"{end.isoformat()}T23:59:59.999Z",
-            "page-size": "5000",
-        }
-    )
-    url = (
+    base_url = (
         "https://api.clockify.me/api/v1/workspaces/"
-        f"{workspace_id}/user/{user_id}/time-entries?{q}"
+        f"{workspace_id}/user/{user_id}/time-entries"
     )
-    items = http_json("GET", url, headers)
-    if not isinstance(items, list):
-        raise RuntimeError("Unexpected Clockify response for time entries.")
+    all_items: list[dict[str, Any]] = []
+    page = 1
+    page_size = 100
+    while True:
+        q = parse.urlencode(
+            {
+                "start": f"{start.isoformat()}T00:00:00.000Z",
+                "end": f"{end.isoformat()}T23:59:59.999Z",
+                "page": str(page),
+                "page-size": str(page_size),
+            }
+        )
+        items = http_json("GET", f"{base_url}?{q}", headers)
+        if not isinstance(items, list):
+            raise RuntimeError("Unexpected Clockify response for time entries.")
+        all_items.extend(items)
+        if len(items) < page_size:
+            break
+        page += 1
 
     totals: dict[dt.date, int] = defaultdict(int)
-    for entry in items:
+    for entry in all_items:
         interval = entry.get("timeInterval") or {}
         start_raw = interval.get("start")
         if not start_raw:
@@ -78,7 +87,9 @@ def clockify_reported_minutes(
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
-    end_date = dt.date.fromisoformat(args.to_date)
+    requested_end_date = dt.date.fromisoformat(args.to_date)
+    today = dt.date.today()
+    end_date = min(requested_end_date, today)
     start_date = (
         dt.date.fromisoformat(args.from_date)
         if args.from_date
@@ -116,6 +127,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     return {
         "range": {"from": start_date.isoformat(), "to": end_date.isoformat()},
+        "requested_to_date": requested_end_date.isoformat(),
         "workday_count": len(work_days),
         "days_to_fill": days_to_fill,
     }
@@ -123,10 +135,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="config/fill-clockify-from-sources.yaml")
+    parser.add_argument("--config", default="config/loggify-me.yaml")
     parser.add_argument(
         "--env-file",
-        default="skills/fill-clockify-from-sources/.credentials.env",
+        default="skills/loggify-me/.credentials.env",
     )
     parser.add_argument("--from-date", default=None)
     parser.add_argument("--to-date", default=dt.date.today().isoformat())
@@ -135,6 +147,11 @@ def main() -> int:
 
     result = run(args)
     print(f"Range: {result['range']['from']} -> {result['range']['to']}")
+    if result["range"]["to"] != result.get("requested_to_date"):
+        print(
+            f"Requested to-date {result['requested_to_date']} is in the future; "
+            f"capped to today {result['range']['to']}."
+        )
     print(f"Working days in range: {result['workday_count']}")
     print(f"Days to fill: {len(result['days_to_fill'])}")
     for day in result["days_to_fill"]:

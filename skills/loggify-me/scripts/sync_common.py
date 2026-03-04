@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import base64
 import datetime as dt
 import json
 import os
@@ -19,8 +18,6 @@ except Exception:  # pragma: no cover
 
 
 REQUIRED_CREDENTIALS = (
-    "ADO_ORG_URL",
-    "ADO_TOKEN",
     "CLOCKIFY_WORKSPACE_ID",
     "CLOCKIFY_API_KEY",
     "WORK_DAYS",
@@ -101,8 +98,6 @@ def build_config(raw: dict[str, Any], creds: dict[str, str]) -> Config:
     schedule = raw.get("schedule") or {}
     sources = raw.get("sources") or {}
     ado = sources.get("ado") or {}
-    if not ado.get("project"):
-        raise ValueError("Missing sources.ado.project in config.")
 
     env_work_days = creds.get("WORK_DAYS", "")
     if env_work_days:
@@ -128,8 +123,8 @@ def build_config(raw: dict[str, Any], creds: dict[str, str]) -> Config:
         daily_target_hours=daily_target_hours,
         exclude_dates=_parse_dates(schedule.get("exclude_dates") or []),
         include_dates=_parse_dates(schedule.get("include_dates") or []),
-        ado_project=str(ado["project"]),
-        ado_org_url=creds["ADO_ORG_URL"].rstrip("/"),
+        ado_project=str(ado.get("project") or ""),
+        ado_org_url=str(creds.get("ADO_ORG_URL") or ado.get("org_url") or "").rstrip("/"),
         workspace_id=creds["CLOCKIFY_WORKSPACE_ID"],
     )
 
@@ -205,8 +200,3 @@ def parse_iso8601_duration_to_minutes(raw: str) -> int | None:
 
 def clockify_headers(api_key: str) -> dict[str, str]:
     return {"X-Api-Key": api_key}
-
-
-def ado_headers(token: str) -> dict[str, str]:
-    encoded = base64.b64encode(f":{token}".encode("utf-8")).decode("ascii")
-    return {"Authorization": f"Basic {encoded}"}

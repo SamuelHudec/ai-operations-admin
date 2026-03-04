@@ -16,14 +16,18 @@ from clockify_reported_days import run as run_clockify
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="config/fill-clockify-from-sources.yaml")
+    parser.add_argument("--config", default="config/loggify-me.yaml")
     parser.add_argument(
         "--env-file",
-        default="skills/fill-clockify-from-sources/.credentials.env",
+        default="skills/loggify-me/.credentials.env",
     )
     parser.add_argument("--from-date", default=None)
     parser.add_argument("--to-date", default=dt.date.today().isoformat())
-    parser.add_argument("--max-items", type=int, default=50)
+    parser.add_argument(
+        "--ado-mcp-json",
+        default="reports/ado-mcp-items.json",
+        help="MCP-exported ADO work item JSON input.",
+    )
     parser.add_argument("--out-json", default=None)
     args = parser.parse_args()
 
@@ -43,7 +47,8 @@ def main() -> int:
             env_file=args.env_file,
             from_date=args.from_date,
             to_date=args.to_date,
-            max_items=args.max_items,
+            mcp_json=args.ado_mcp_json,
+            states="Active,Closed,Done,Resolved,In Review",
             only_days_json=None,
             only_days=[d["date"] for d in clockify_result["days_to_fill"]],
             out_json=None,

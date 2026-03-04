@@ -5,7 +5,7 @@ This file defines how to map multi-source activity into Clockify entries while r
 ## Suggested file path
 
 Use a local config file at:
-- `config/fill-clockify-from-sources.yaml`
+- `config/loggify-me.yaml`
 
 Do not store secrets in this file. Keep only non-sensitive settings.
 Personal schedule can also be provided in skill-local `.credentials.env` via:
@@ -41,7 +41,9 @@ sources:
     effort_field: "Microsoft.VSTS.Scheduling.CompletedWork"
   calendar:
     enabled: true
-    provider: "microsoft_graph"
+    provider: "ics"
+    ics_file: "/path/to/calendar.ics"
+    # alternatively: ics_url: "https://.../calendar.ics"
     include_event_types: ["meeting", "focus"]
     min_minutes: 15
   holidays:
@@ -55,6 +57,7 @@ clockify:
   default_project_id: "project-id-default"
   default_task_id: null
   billable: true
+  ceremony_tag_name: "ceremony"
 
 mapping:
   by_source:
@@ -93,7 +96,17 @@ clockify_planning:
   min_block_minutes: 60
   max_entries_per_day: 8
   default_fallback_description: "Operational and coordination work."
+  ceremony_keywords:
+    - "standup"
+    - "planning"
+    - "review"
+    - "retro"
+    - "refinement"
 ```
+
+Note:
+- In MCP-first mode, ADO data is loaded from MCP export JSON (`reports/ado-mcp-items.json`).
+- `sources.ado.*` is optional metadata and can stay minimal.
 
 ## Rule priority
 
