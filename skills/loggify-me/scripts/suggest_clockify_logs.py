@@ -52,15 +52,15 @@ def _clean_ticket_title(raw: str) -> str:
 
 def _sentence_for_ticket(ticket: dict[str, Any], occurrence: int, fallback_text: str) -> str:
     ticket_id = ticket.get("id")
+    suffix = f" (part {occurrence})" if occurrence > 1 else ""
+    if ticket_id not in (None, ""):
+        return f"{ticket_id}{suffix}"
     title = _short_text(_clean_ticket_title(str(ticket.get("title") or "")))
     if not title:
         title = _short_text(fallback_text)
     if not title:
         title = "Work item"
-
-    prefix = f"ADO #{ticket_id}: " if ticket_id not in (None, "") else "ADO: "
-    suffix = f" (part {occurrence})" if occurrence > 1 else ""
-    return f"{prefix}{title}{suffix}"
+    return f"{title}{suffix}"
 
 
 def _print_table(rows: list[dict[str, Any]]) -> None:
@@ -190,10 +190,13 @@ def _pick_block_minutes(
     window_len: int,
     min_block_minutes: int,
     max_block_minutes: int,
+    prefer_large_block: bool = False,
 ) -> int:
     cap = min(remaining, window_len, max_block_minutes)
     if cap <= 0:
         return 0
+    if prefer_large_block:
+        return cap
     if remaining <= min_block_minutes:
         return cap
     pattern = [60, 90, 120, 150, 180]
@@ -204,6 +207,25 @@ def _pick_block_minutes(
     if preferred > cap:
         return cap
     return preferred
+
+
+def _pick_window(
+    windows: list[tuple[int, int]],
+    min_block_minutes: int,
+    min_entry_minutes: int,
+    prefer_large_block: bool = False,
+) -> tuple[int, int] | None:
+    usable = [
+        window
+        for window in windows
+        if (window[1] - window[0]) >= min_block_minutes
+        or (window[1] - window[0]) >= min_entry_minutes
+    ]
+    if not usable:
+        return None
+    if prefer_large_block:
+        return max(usable, key=lambda window: window[1] - window[0])
+    return usable[0]
 
 
 def generate_suggestions(
@@ -275,6 +297,7 @@ def generate_suggestions(
             continue
 
         day_rows: list[dict[str, Any]] = []
+        day_ticket_counts: dict[int, int] = {}
         occupied: list[tuple[int, int]] = []
 
         # 1) Place meetings first in their real time windows.
@@ -326,20 +349,20 @@ def generate_suggestions(
             windows = _free_windows(day_start_minutes, day_end_minutes, occupied)
             if not windows:
                 break
-            # Pick first usable window; allow short final block down to min_entry_minutes.
-            chosen_window: tuple[int, int] | None = None
-            for window in windows:
-                win_len = window[1] - window[0]
-                if win_len >= min_block_minutes or win_len >= min_entry_minutes:
-                    chosen_window = window
-                    break
+            ticket = tickets[i % len(tickets)]
+            tid = int(ticket["id"])
+            prefer_large_block = len(tickets) == 1 or day_ticket_counts.get(tid, 0) > 0
+            chosen_window = _pick_window(
+                windows,
+                min_block_minutes=min_block_minutes,
+                min_entry_minutes=min_entry_minutes,
+                prefer_large_block=prefer_large_block,
+            )
             if chosen_window is None:
                 break
 
             start_m = chosen_window[0]
             window_len = chosen_window[1] - chosen_window[0]
-            ticket = tickets[i % len(tickets)]
-            tid = int(ticket["id"])
             occurrences[tid] = occurrences.get(tid, 0) + 1
             block_minutes = _pick_block_minutes(
                 day=day,
@@ -348,6 +371,7 @@ def generate_suggestions(
                 window_len=window_len,
                 min_block_minutes=min_block_minutes,
                 max_block_minutes=max_block_minutes,
+                prefer_large_block=prefer_large_block,
             )
             if block_minutes < min_entry_minutes:
                 break
@@ -355,6 +379,7 @@ def generate_suggestions(
             end_m = start_m + int(block_minutes)
             occupied.append((start_m, end_m))
             occupied = _merge_intervals(occupied)
+            day_ticket_counts[tid] = day_ticket_counts.get(tid, 0) + 1
             day_rows.append(
                 {
                     "date": day,

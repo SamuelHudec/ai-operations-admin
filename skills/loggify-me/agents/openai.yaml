@@ -1,0 +1,4 @@
+interface:
+  display_name: "Loggify Me"
+  short_description: "Fill Clockify from ADO work and calendar meetings"
+  default_prompt: "Use $loggify-me to fill my Clockify entries for this week from ADO work items and calendar meetings."

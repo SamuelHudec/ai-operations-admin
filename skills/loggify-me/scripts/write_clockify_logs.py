@@ -49,6 +49,10 @@ def _validate_rows(rows: list[dict[str, Any]]) -> None:
         minutes = int(row["minutes"])
         if minutes <= 0:
             raise ValueError(f"Row {idx} has non-positive minutes: {minutes}")
+        if str(row.get("source_type") or "") == "ado" and row.get("parent_epic_id") in (None, ""):
+            raise ValueError(
+                f"Row {idx} for ADO ticket {row.get('ticket_id')} is missing parent_epic_id"
+            )
 
 
 def _validate_direct_entries(rows: list[dict[str, Any]]) -> None:
@@ -233,6 +237,22 @@ def _print_suggested_rows_table(rows: list[dict[str, Any]]) -> None:
         )
 
 
+def _payload_tag_label(payload: dict[str, Any], tag_id_to_name: dict[str, str] | None = None) -> str:
+    names: list[str] = []
+    for name in payload.get("tagNames") or []:
+        if str(name).strip():
+            names.append(str(name))
+    epic_tag = payload.get("epicTagName")
+    if epic_tag:
+        names.append(str(epic_tag))
+    if not names and tag_id_to_name:
+        for tag_id in payload.get("tagIds") or []:
+            mapped = tag_id_to_name.get(str(tag_id))
+            if mapped:
+                names.append(mapped)
+    return ",".join(names) if names else "-"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--accepted-json", default="reports/suggested-logs.accepted.json")
@@ -341,7 +361,8 @@ def main() -> int:
     for i, payload in enumerate(payloads[:20], start=1):
         print(
             f"{i}. {payload['start']} -> {payload['end']} | "
-            f"{payload['projectId']} | {payload['description'][:80]}"
+            f"{payload['projectId']} | {payload['description'][:80]} | "
+            f"tag={_payload_tag_label(payload)}"
         )
     if len(payloads) > 20:
         print(f"... and {len(payloads) - 20} more rows")
@@ -376,8 +397,15 @@ def main() -> int:
                     existing_ids.append(tag_id)
             if existing_ids:
                 payload["tagIds"] = existing_ids
+            payload_tag_text = _payload_tag_label(
+                {"tagIds": existing_ids},
+                tag_id_to_name={v: k for k, v in tag_cache.items()},
+            )
             http_json("POST", endpoint, headers, payload)
             created += 1
+            print(
+                f"OK row {idx}: {payload['description'][:80]} | tag={payload_tag_text}"
+            )
         except Exception as exc:
             errors.append(f"row {idx}: {exc}")
             if args.fail_fast:

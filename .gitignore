@@ -209,8 +209,22 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Skill-local secrets
+# Local credentials and secrets
 **/.credentials.env
+*.env.local
+*.env.secret
+*.env.secrets
+*.env.private
+*.creds
+*.credentials
+*.secret
+*.secrets
+secrets.env
+credentials.env
+credentials.local.*
+*.pem
+*.p12
+*.pfx
 
 # Local generated reports (can contain personal calendar/ticket data)
 reports/
