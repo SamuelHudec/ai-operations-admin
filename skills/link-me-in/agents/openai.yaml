@@ -1,0 +1,4 @@
+interface:
+  display_name: "Link Me In"
+  short_description: "Publish LinkedIn posts and update profiles"
+  default_prompt: "Use $link-me-in to draft, review, and publish a LinkedIn post or update my LinkedIn profile safely."
