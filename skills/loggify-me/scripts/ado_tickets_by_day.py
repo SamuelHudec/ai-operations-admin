@@ -59,6 +59,10 @@ def _normalize_parent_epic(value: Any) -> str:
     return str(value or "")
 
 
+def _normalized_type(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
 def _compact(item: dict[str, Any]) -> dict[str, Any]:
     parent = item.get("parent_epic")
     parent_id = None
@@ -80,9 +84,69 @@ def _compact(item: dict[str, Any]) -> dict[str, Any]:
         "tags": str(item.get("tags") or ""),
         "area_path": str(item.get("area_path") or ""),
         "iteration_path": str(item.get("iteration_path") or ""),
+        "assigned_to": str(
+            item.get("assigned_to")
+            or item.get("assigned_to_name")
+            or item.get("assigned_to_display_name")
+            or ""
+        ),
+        "assigned_to_email": str(
+            item.get("assigned_to_email")
+            or item.get("assigned_to_unique_name")
+            or ""
+        ),
         "parent_epic": _normalize_parent_epic(item.get("parent_epic")),
         "parent_epic_id": parent_id,
     }
+
+
+def _normalized_identity(value: str) -> str:
+    return value.strip().lower()
+
+
+def _is_placeholder_identity(value: str) -> bool:
+    normalized = _normalized_identity(value)
+    if not normalized:
+        return True
+    placeholders = {
+        "name@company.com",
+        "user@example.com",
+        "your@email.com",
+    }
+    return normalized in placeholders or normalized.endswith("@example.com")
+
+
+def _item_matches_owner(
+    item: dict[str, Any],
+    owner_email: str,
+    owner_name: str,
+) -> bool:
+    if not owner_email and not owner_name:
+        return True
+
+    assigned_email = _normalized_identity(
+        str(
+            item.get("assigned_to_email")
+            or item.get("assigned_to_unique_name")
+            or ""
+        )
+    )
+    assigned_name = _normalized_identity(
+        str(
+            item.get("assigned_to")
+            or item.get("assigned_to_name")
+            or item.get("assigned_to_display_name")
+            or ""
+        )
+    )
+
+    if not assigned_email and not assigned_name:
+        return True
+    if owner_email and assigned_email:
+        return assigned_email == owner_email
+    if owner_name and assigned_name:
+        return assigned_name == owner_name
+    return False
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
@@ -98,7 +162,31 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     env_values = parse_env_file(Path(args.env_file))
     creds = require_credentials(env_values)
     raw_cfg = load_yaml(Path(args.config))
-    build_config(raw_cfg, creds)
+    cfg = build_config(raw_cfg, creds)
+    owner_email = _normalized_identity(
+        str(
+            getattr(args, "owner_email", None)
+            or env_values.get("ADO_USER_EMAIL")
+            or ((raw_cfg.get("user") or {}).get("email") or "")
+        )
+    )
+    owner_name = _normalized_identity(
+        str(
+            getattr(args, "owner_name", None)
+            or env_values.get("ADO_USER_NAME")
+            or ""
+        )
+    )
+    if _is_placeholder_identity(owner_email):
+        owner_email = ""
+    if _is_placeholder_identity(owner_name):
+        owner_name = ""
+    if getattr(args, "only_assigned_to_me", False) and not (owner_email or owner_name):
+        raise ValueError(
+            "Assigned-only filtering requires owner identity. "
+            "Set ADO_USER_EMAIL or ADO_USER_NAME in skills/loggify-me/.credentials.env, "
+            "or pass --owner-email/--owner-name."
+        )
 
     day_filter: set[str] | None = None
     only_days = getattr(args, "only_days", None)
@@ -114,6 +202,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         for s in (args.states or "Active,Closed,Done,Resolved,In Review").split(",")
         if s.strip()
     }
+    excluded_types = {
+        _normalized_type(s)
+        for s in (getattr(args, "exclude_types", None) or "").split(",")
+        if s.strip()
+    }
     by_day: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for item in items:
         if "id" not in item:
@@ -123,6 +216,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         if state == "new":
             continue
         if allowed_states and state not in allowed_states:
+            continue
+        item_type = _normalized_type(item.get("type") or item.get("work_item_type"))
+        if item_type in excluded_types:
+            continue
+        if getattr(args, "only_assigned_to_me", False) and not _item_matches_owner(
+            item,
+            owner_email=owner_email,
+            owner_name=owner_name,
+        ):
             continue
         compact = _compact(item)
         touched_dates = _normalize_touched_dates(item)
@@ -168,9 +270,29 @@ def main() -> int:
         help="Comma-separated allowed ADO states (state 'New' is always excluded).",
     )
     parser.add_argument(
+        "--exclude-types",
+        default="",
+        help="Comma-separated work item types to exclude from planning.",
+    )
+    parser.add_argument(
         "--only-days-json",
         default=None,
         help="Optional JSON from clockify_reported_days.py to filter only missing days.",
+    )
+    parser.add_argument(
+        "--only-assigned-to-me",
+        action="store_true",
+        help="Exclude items assigned to someone else when assignee fields are present in MCP JSON.",
+    )
+    parser.add_argument(
+        "--owner-email",
+        default=None,
+        help="Owner email used with --only-assigned-to-me. Defaults to ADO_USER_EMAIL or config user.email.",
+    )
+    parser.add_argument(
+        "--owner-name",
+        default=None,
+        help="Optional owner display name fallback used with --only-assigned-to-me.",
     )
     parser.add_argument("--out-json", default=None)
     args = parser.parse_args()

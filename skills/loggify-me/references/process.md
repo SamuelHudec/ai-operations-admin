@@ -29,11 +29,15 @@ Create a reliable plan of what days need filling in Clockify, then list ADO tick
 - Enrich each ticket with description, comments, and parent epic.
 - Group tickets by touched day.
 - Exclude items with state `New`.
+- For personal Clockify fill, include only items assigned to the user.
+- For personal Clockify fill, include only active items in the selected period. Exclude `Closed`, `Done`, `Resolved`, and similar terminal states.
+- Prefer child work items for logging. Never log epics, and exclude parent planning items such as user stories/features unless the user explicitly asks to include them.
 - This step follows the same MCP-first behavior as `ADO-create-a-item` (no direct ADO API calls).
 
 5. Plan build
 - Keep only missing Clockify days.
 - Attach grouped ADO tickets and ceremony meetings to those days.
+- If a missing day has no same-day eligible ADO child item but the requested range has eligible assigned active child items, reuse that range ticket pool so the day can still be filled to the configured target.
 - Output readable plan and JSON artifact.
 
 6. Review and corrections

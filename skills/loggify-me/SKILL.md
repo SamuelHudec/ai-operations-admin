@@ -53,13 +53,19 @@ Important local values:
 4. Fetch ADO work items through MCP and save normalized export.
 5. Build the fill plan for missing days only.
 6. Suggest Clockify log rows from meetings plus ADO work.
-7. Run a dry-run writer and show the final table.
-8. Ask for confirmation before `--apply`.
+7. Always list the suggested logs in the response for inspection before any apply step.
+8. Run a dry-run writer and show the final table.
+9. Ask for confirmation before `--apply`.
 
 ## Current behavior
 
 - Scope is ADO via MCP, calendar via ICS, and Clockify.
 - Future dates are ignored.
+- Personal logging plans must include only items assigned to the user.
+- Personal logging plans must include only active items in the requested period. Do not log closed, done, or resolved items.
+- Prefer child work items for ADO logging. Never log epics. Exclude user stories and other parent planning items from personal logging plans unless the user explicitly asks to include them.
+- Daily logged time must reach the configured target for each missing workday whenever there is at least one eligible ADO child work item in the requested range.
+- If a missing day has no same-day eligible ADO touch, reuse the eligible ticket pool from the requested range before leaving the day underfilled.
 - Calendar meetings are logged first at their real time.
 - Remaining time is filled with ADO blocks around meetings.
 - Repeated logs for the same ADO ticket should prefer larger available blocks when possible.
@@ -67,6 +73,7 @@ Important local values:
 - ADO log rows must carry `parent_epic_id`.
 - Clockify tag for ADO rows should be the parent epic ID only.
 - Always dry-run before apply.
+- Always list the suggested logs explicitly so the user can inspect them before apply.
 
 ## Main scripts
 
@@ -92,4 +99,5 @@ Use the scripts instead of re-implementing the workflow.
 When using this skill, return:
 1. A short execution summary.
 2. Any unresolved items needing user action.
-3. The dry-run or apply result, including visible Clockify tag output for ADO rows.
+3. The suggested logs listed explicitly for inspection.
+4. The dry-run or apply result, including visible Clockify tag output for ADO rows.

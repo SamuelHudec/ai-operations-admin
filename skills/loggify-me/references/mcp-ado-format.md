@@ -28,7 +28,13 @@ Accepted root shapes:
 - `tags`
 - `area_path`
 - `iteration_path`
+- `assigned_to`
+- `assigned_to_email`
 - `parent_epic`
+- `parent_epic_id`
+- `parent_id`
+- `parent_type`
+- `child_ids`
 
 ## Example
 
@@ -45,9 +51,26 @@ Accepted root shapes:
       "tags": "auth;backend",
       "area_path": "Platform\\Identity",
       "iteration_path": "Sprint 45",
+      "assigned_to": "Samuel EXT Hudec",
+      "assigned_to_email": "extHudec@dr-max.global",
       "parent_epic": "Identity Reliability",
       "touched_dates": ["2026-03-02", "2026-03-03"]
     }
   ]
 }
 ```
+
+## Ownership filter
+
+If assignee fields are present, `ado_tickets_by_day.py --only-assigned-to-me` can exclude
+items assigned to someone else. This is the recommended mode for personal Clockify fill.
+
+## Personal logging rules
+
+For personal Clockify fill:
+- include only items assigned to the user
+- include only active items in the selected period
+- exclude terminal states such as `Closed`, `Done`, and `Resolved`
+- never log epics
+- prefer child work items over parent planning items
+- exclude user stories/features from personal logging plans unless explicitly requested

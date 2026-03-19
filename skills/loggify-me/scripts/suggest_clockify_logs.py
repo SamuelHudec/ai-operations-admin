@@ -52,15 +52,14 @@ def _clean_ticket_title(raw: str) -> str:
 
 def _sentence_for_ticket(ticket: dict[str, Any], occurrence: int, fallback_text: str) -> str:
     ticket_id = ticket.get("id")
-    suffix = f" (part {occurrence})" if occurrence > 1 else ""
     if ticket_id not in (None, ""):
-        return f"{ticket_id}{suffix}"
+        return f"{ticket_id}"
     title = _short_text(_clean_ticket_title(str(ticket.get("title") or "")))
     if not title:
         title = _short_text(fallback_text)
     if not title:
         title = "Work item"
-    return f"{title}{suffix}"
+    return f"{title}"
 
 
 def _print_table(rows: list[dict[str, Any]]) -> None:
@@ -278,20 +277,12 @@ def generate_suggestions(
         except Exception:
             continue
         calendar_by_day.setdefault(day, []).append(event)
-    ticket_pool: list[dict[str, Any]] = []
-    seen_ids: set[int] = set()
-    for items in days_plan.values():
-        for ticket in items:
-            tid = int(ticket["id"])
-            if tid not in seen_ids:
-                ticket_pool.append(ticket)
-                seen_ids.add(tid)
     occurrences: dict[int, int] = {}
     suggested_rows: list[dict[str, Any]] = []
     unresolved_days: list[str] = []
 
     for day in sorted(missing_by_day.keys()):
-        tickets = list(days_plan.get(day) or ticket_pool)
+        tickets = list(days_plan.get(day) or [])
         day_missing = missing_by_day[day]
         if day_missing <= 0:
             continue
