@@ -9,6 +9,7 @@ Create a reliable plan of what days need filling in Clockify, then list ADO tick
 1. Credential check
 - Verify `CLOCKIFY_WORKSPACE_ID`, `CLOCKIFY_API_KEY`, `WORK_DAYS`, `DAILY_TARGET_HOURS`.
 - Fail early with clear missing keys list.
+- If the user did not specify a date range, default to the current workweek through today.
 
 2. Clockify coverage scan
 - Read existing Clockify time entries for the date range.
@@ -67,7 +68,7 @@ Create a reliable plan of what days need filling in Clockify, then list ADO tick
 ## Script boundaries
 
 - `check_credentials.py`: validate required secrets.
-- `clockify_reported_days.py`: days-to-fill from Clockify + schedule config.
+- `clockify_reported_days.py`: days-to-fill from Clockify + schedule config. If no `--from-date` is given, default to the current workweek start rather than the first day of the month.
 - `ado_tickets_by_day.py`: ticket details grouped by day from MCP-exported ADO JSON.
 - `plan_ado_clockify_fill.py`: combine Clockify output + MCP ADO output into one plan.
 - `fetch_calendar_via_ics.py`: fetch calendar JSON from ICS file or URL.

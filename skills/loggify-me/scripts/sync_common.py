@@ -38,6 +38,19 @@ class Config:
     workspace_id: str
 
 
+PLACEHOLDER_VALUES = {
+    "",
+    "name@company.com",
+    "user@example.com",
+    "your@email.com",
+    "yourproject",
+    "workspace-id",
+    "project-id-default",
+    "https://dev.azure.com/your-org",
+    "/path/to/calendar.ics",
+}
+
+
 def parse_env_file(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
     if not path.exists():
@@ -65,6 +78,30 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 def get_value(name: str, env_file_values: dict[str, str]) -> str:
     return os.environ.get(name, "").strip() or env_file_values.get(name, "").strip()
+
+
+def is_placeholder_value(value: str) -> bool:
+    normalized = value.strip().strip('"').strip("'")
+    lowered = normalized.lower()
+    return lowered in PLACEHOLDER_VALUES or lowered.endswith("@example.com")
+
+
+def runtime_date_range(
+    *,
+    from_date: str | None,
+    to_date: str | None,
+    today: dt.date | None = None,
+) -> tuple[dt.date, dt.date, dt.date]:
+    current_day = today or dt.date.today()
+    requested_end_date = dt.date.fromisoformat(to_date) if to_date else current_day
+    end_date = min(requested_end_date, current_day)
+    if from_date:
+        start_date = dt.date.fromisoformat(from_date)
+    else:
+        start_date = end_date - dt.timedelta(days=end_date.weekday())
+    if start_date > end_date:
+        raise ValueError("--from-date cannot be after --to-date.")
+    return start_date, end_date, requested_end_date
 
 
 def require_credentials(env_file_values: dict[str, str]) -> dict[str, str]:
@@ -117,14 +154,22 @@ def build_config(raw: dict[str, Any], creds: dict[str, str]) -> Config:
     env_timezone = creds.get("USER_TIMEZONE", "")
     timezone = env_timezone or str(user.get("timezone") or "UTC")
 
+    ado_project = str(creds.get("ADO_PROJECT") or ado.get("project") or "").strip()
+    if is_placeholder_value(ado_project):
+        ado_project = ""
+
+    ado_org_url = str(creds.get("ADO_ORG_URL") or ado.get("org_url") or "").strip().rstrip("/")
+    if is_placeholder_value(ado_org_url):
+        ado_org_url = ""
+
     return Config(
         timezone=timezone,
         workdays=list(workdays),
         daily_target_hours=daily_target_hours,
         exclude_dates=_parse_dates(schedule.get("exclude_dates") or []),
         include_dates=_parse_dates(schedule.get("include_dates") or []),
-        ado_project=str(ado.get("project") or ""),
-        ado_org_url=str(creds.get("ADO_ORG_URL") or ado.get("org_url") or "").rstrip("/"),
+        ado_project=ado_project,
+        ado_org_url=ado_org_url,
         workspace_id=creds["CLOCKIFY_WORKSPACE_ID"],
     )
 

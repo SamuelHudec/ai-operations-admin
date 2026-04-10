@@ -31,10 +31,14 @@ Read only what is needed:
 ## Required inputs
 
 Before syncing, confirm:
-- date range
 - `config/loggify-me.yaml` exists or can be created
 - `skills/loggify-me/.credentials.env` has required Clockify and calendar values
 - ADO activity can be exported to `reports/ado-mcp-items.json`
+
+Default assumptions when the user just says `loggify-me`:
+- date range defaults to the current workweek through today in the user's timezone
+- use env-backed values from `skills/loggify-me/.credentials.env` when YAML still contains placeholders
+- only stop to ask the user if credentials are missing, the ADO export is missing, or apply confirmation is needed
 
 Important local values:
 - `CLOCKIFY_DEFAULT_PROJECT_ID`
@@ -47,7 +51,7 @@ Important local values:
 
 ## Workflow
 
-1. Validate credentials and config.
+1. Validate credentials and config. Treat env-backed values as the runtime source of truth when YAML still contains template placeholders.
 2. Find missing Clockify days in the requested range.
 3. Fetch calendar events for that range.
 4. Fetch ADO work items through MCP and save normalized export.

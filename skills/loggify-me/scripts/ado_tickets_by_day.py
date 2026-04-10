@@ -11,7 +11,13 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from sync_common import build_config, load_yaml, parse_env_file, require_credentials
+from sync_common import (
+    build_config,
+    load_yaml,
+    parse_env_file,
+    require_credentials,
+    runtime_date_range,
+)
 
 
 def _load_mcp_items(path: Path) -> list[dict[str, Any]]:
@@ -150,14 +156,10 @@ def _item_matches_owner(
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
-    end_date = dt.date.fromisoformat(args.to_date)
-    start_date = (
-        dt.date.fromisoformat(args.from_date)
-        if args.from_date
-        else end_date.replace(day=1)
+    start_date, end_date, _ = runtime_date_range(
+        from_date=args.from_date,
+        to_date=args.to_date,
     )
-    if start_date > end_date:
-        raise ValueError("--from-date cannot be after --to-date.")
 
     env_values = parse_env_file(Path(args.env_file))
     creds = require_credentials(env_values)

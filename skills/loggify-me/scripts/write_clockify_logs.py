@@ -253,6 +253,23 @@ def _payload_tag_label(payload: dict[str, Any], tag_id_to_name: dict[str, str] |
     return ",".join(names) if names else "-"
 
 
+def _load_source_json(accepted_path: Path, fallback_path: Path) -> tuple[Path, Any]:
+    def load(path: Path) -> Any:
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    if accepted_path.exists():
+        accepted = load(accepted_path)
+        if isinstance(accepted, dict) and list(accepted.get("suggested_logs") or []):
+            return accepted_path, accepted
+        if isinstance(accepted, list) and accepted:
+            return accepted_path, accepted
+    if fallback_path.exists():
+        return fallback_path, load(fallback_path)
+    raise FileNotFoundError(
+        f"Accepted plan not found: {accepted_path} (and fallback missing: {fallback_path})"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--accepted-json", default="reports/suggested-logs.accepted.json")
@@ -300,12 +317,8 @@ def main() -> int:
     args = parser.parse_args()
 
     accepted_path = Path(args.accepted_json)
-    source_path = accepted_path if accepted_path.exists() else Path(args.fallback_json)
-    if not source_path.exists():
-        raise FileNotFoundError(
-            f"Accepted plan not found: {accepted_path} (and fallback missing: {args.fallback_json})"
-        )
-    source = json.loads(source_path.read_text(encoding="utf-8"))
+    fallback_path = Path(args.fallback_json)
+    source_path, source = _load_source_json(accepted_path, fallback_path)
 
     env_values = parse_env_file(Path(args.env_file))
     creds = require_credentials(env_values)

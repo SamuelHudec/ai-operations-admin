@@ -21,6 +21,7 @@ from sync_common import (
     parse_iso8601_duration_to_minutes,
     parse_iso_datetime,
     require_credentials,
+    runtime_date_range,
     working_days,
 )
 
@@ -87,16 +88,10 @@ def clockify_reported_minutes(
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
-    requested_end_date = dt.date.fromisoformat(args.to_date)
-    today = dt.date.today()
-    end_date = min(requested_end_date, today)
-    start_date = (
-        dt.date.fromisoformat(args.from_date)
-        if args.from_date
-        else end_date.replace(day=1)
+    start_date, end_date, requested_end_date = runtime_date_range(
+        from_date=args.from_date,
+        to_date=args.to_date,
     )
-    if start_date > end_date:
-        raise ValueError("--from-date cannot be after --to-date.")
 
     env_values = parse_env_file(Path(args.env_file))
     creds = require_credentials(env_values)

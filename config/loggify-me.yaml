@@ -7,7 +7,7 @@ user:
   country_code: "CZ"
 
 schedule:
-  workdays: ["mon", "tue", "wed", "thu", "fri"]
+  workdays: ["mon", "tue", "wed", "thu"]
   daily_target_hours: 8
   exclude_dates: []
   include_dates: []

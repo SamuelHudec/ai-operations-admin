@@ -74,7 +74,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--states",
-        default="Active,In Review",
+        default="Active,Review,In Review",
         help="Comma-separated ADO states allowed for personal logging plans.",
     )
     parser.add_argument(

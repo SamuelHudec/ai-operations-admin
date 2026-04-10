@@ -14,6 +14,18 @@ Personal schedule can also be provided in skill-local `.credentials.env` via:
 - `USER_TIMEZONE` (optional)
 These values override YAML when present.
 
+Additional runtime overrides that may live in `skills/loggify-me/.credentials.env`:
+- `ADO_ORG_URL`
+- `ADO_PROJECT`
+- `ADO_USER_EMAIL`
+- `ADO_USER_NAME`
+- `CLOCKIFY_WORKSPACE_ID`
+- `CLOCKIFY_DEFAULT_PROJECT_ID`
+- `CALENDAR_ICS_URL`
+- `CALENDAR_ICS_FILE`
+
+This allows `config/loggify-me.yaml` to remain mostly template-shaped as long as the runtime values are available from env.
+
 ## Schema
 
 ```yaml
