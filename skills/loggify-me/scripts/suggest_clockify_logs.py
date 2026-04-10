@@ -125,6 +125,25 @@ def _event_to_local_minutes(event: dict[str, Any], day: str) -> tuple[int, int] 
     return start_minutes, end_minutes
 
 
+def _dedupe_calendar_events(
+    calendar_events: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    if not calendar_events:
+        return []
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for event in calendar_events:
+        start_raw = str(event.get("start") or "")
+        end_raw = str(event.get("end") or "")
+        subject = _strip_html(str(event.get("subject") or "")).casefold()
+        key = (start_raw, end_raw, subject, str(event.get("all_day") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(event)
+    return deduped
+
+
 def _merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
     if not intervals:
         return []
@@ -268,7 +287,7 @@ def generate_suggestions(
             missing_by_day[day_raw] = int(d.get("missing_minutes") or 0)
     days_plan = plan.get("days_plan") or {}
     calendar_by_day: dict[str, list[dict[str, Any]]] = {}
-    for event in calendar_events or []:
+    for event in _dedupe_calendar_events(calendar_events):
         start_raw = str(event.get("start") or "")
         if not start_raw:
             continue

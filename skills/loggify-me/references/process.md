@@ -49,6 +49,7 @@ Create a reliable plan of what days need filling in Clockify, then list ADO tick
 7. Rule-based log suggestion
 - Apply planning rules (for example max single block 6h).
 - Insert calendar meetings first using actual meeting start/end slots.
+- Clean up duplicate calendar events that resolve to the same local day, time window, and title before building final suggestions.
 - Enforce block sizes between 1h and 6h.
 - Fill remaining target minutes with ADO blocks around occupied meeting slots.
 - Generate suggested Clockify log blocks in table and JSON.
