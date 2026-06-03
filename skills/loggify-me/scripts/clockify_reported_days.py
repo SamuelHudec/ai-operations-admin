@@ -97,6 +97,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     creds = require_credentials(env_values)
     raw_cfg = load_yaml(Path(args.config))
     cfg = build_config(raw_cfg, creds)
+    include_dates_arg = getattr(args, "include_dates", None)
+    if include_dates_arg:
+        for raw_day in str(include_dates_arg).split(","):
+            day = raw_day.strip()
+            if day:
+                cfg.include_dates.add(dt.date.fromisoformat(day))
 
     reported = clockify_reported_minutes(
         api_key=creds["CLOCKIFY_API_KEY"],
@@ -137,6 +143,14 @@ def main() -> int:
     )
     parser.add_argument("--from-date", default=None)
     parser.add_argument("--to-date", default=dt.date.today().isoformat())
+    parser.add_argument(
+        "--include-dates",
+        default=None,
+        help=(
+            "Comma-separated YYYY-MM-DD dates to include for this run even when "
+            "they are not configured workdays."
+        ),
+    )
     parser.add_argument("--out-json", default=None)
     args = parser.parse_args()
 

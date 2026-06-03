@@ -52,6 +52,14 @@ def main() -> int:
     parser.add_argument("--from-date", default=None)
     parser.add_argument("--to-date", default=dt.date.today().isoformat())
     parser.add_argument(
+        "--include-dates",
+        default=None,
+        help=(
+            "Comma-separated YYYY-MM-DD dates to include for this run even when "
+            "they are not configured workdays."
+        ),
+    )
+    parser.add_argument(
         "--ado-mcp-json",
         default="reports/ado-mcp-items.json",
         help="MCP-exported ADO work item JSON input.",
@@ -79,7 +87,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--exclude-types",
-        default="Epic,Feature,User Story",
+        default="Epic,Feature",
         help="Comma-separated work item types excluded from personal logging plans.",
     )
     parser.add_argument("--out-json", default=None)
@@ -92,6 +100,7 @@ def main() -> int:
             env_file=args.env_file,
             from_date=args.from_date,
             to_date=args.to_date,
+            include_dates=args.include_dates,
             out_json=None,
         )
     )

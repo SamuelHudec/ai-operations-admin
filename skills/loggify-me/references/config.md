@@ -134,6 +134,7 @@ Use the following priority to assign hours per day:
 - Include only `schedule.workdays`.
 - Exclude any date in `exclude_dates`.
 - Always include any date in `include_dates` (useful for weekend overtime).
+- If the user explicitly asks to log dates outside the configured workdays, include those dates for that run using `include_dates` or the script-level `--include-dates` override.
 - If `holidays` source is enabled and `behavior=block_workday`, block holiday dates unless explicitly included.
 
 ## Daily cap behavior

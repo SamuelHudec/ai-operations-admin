@@ -66,10 +66,12 @@ Important local values:
 
 - Scope is ADO via MCP, calendar via ICS, and Clockify.
 - Future dates are ignored.
+- By default, log only configured workdays. If the user explicitly asks to log other dates or days, honor that request for the run by adding those dates to `include_dates` or passing `--include-dates`; do not require a permanent config change unless they ask for one.
 - Personal logging plans must include only items assigned to the user.
 - Personal logging plans must include only active items in the requested period. Do not log closed, done, or resolved items.
-- Prefer child work items for ADO logging. Never log epics. Exclude user stories and other parent planning items from personal logging plans unless the user explicitly asks to include them.
-- Daily logged time must reach the configured target for each missing workday whenever there is at least one eligible ADO child work item in the requested range.
+- Prefer child work items for ADO logging and never log epics.
+- By default, include the user's assigned active work items when building the fill plan, including active tasks, user stories, and improvement stories. Exclude only true parent planning layers such as epics and features unless the user explicitly asks to include them.
+- Daily logged time must reach the configured target for each missing workday whenever there is at least one eligible assigned active work item in the requested range.
 - If a missing day has no same-day eligible ADO touch, reuse the eligible ticket pool from the requested range before leaving the day underfilled.
 - Calendar meetings are logged first at their real time.
 - Duplicate calendar events with the same local day, time window, and title must be collapsed before apply.
